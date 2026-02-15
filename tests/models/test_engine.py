@@ -42,7 +42,7 @@ from verl.utils.torch_functional import logprobs_from_logits_naive
 from verl.workers.config import (
     ActorConfig,
     CriticConfig,
-    DistillationConfig,
+    TeacherModelConfig,
     FSDPEngineConfig,
     FSDPOptimizerConfig,
     HFModelConfig,
@@ -101,7 +101,7 @@ def create_training_config(model_type, strategy, device_count, model):
     else:
         raise NotImplementedError(f"strategy {strategy} is not supported")
 
-    distillation_config = DistillationConfig(strategy=strategy, rollout_n=-1, ppo_micro_batch_size_per_gpu=-1)
+    distillation_config = TeacherModelConfig(strategy=strategy, rollout_n=-1, ppo_micro_batch_size_per_gpu=-1)
 
     config = TrainingWorkerConfig(
         model_type=model_type,
@@ -209,7 +209,7 @@ def test_actor_engine(strategy):
     actor_config = ActorConfig(strategy=strategy, rollout_n=1, ppo_micro_batch_size_per_gpu=-1)
 
     # construct distillation config
-    distillation_config = DistillationConfig(strategy=strategy, rollout_n=-1, ppo_micro_batch_size_per_gpu=-1)
+    distillation_config = TeacherModelConfig(strategy=strategy, rollout_n=-1, ppo_micro_batch_size_per_gpu=-1)
 
     # set ppo loss
     ppo_loss_ = partial(ppo_loss, config=actor_config, distillation_config=distillation_config)
@@ -402,7 +402,7 @@ def _worker(rank: int, world_size: int, rendezvous_file: str, strategy: str, mod
 
     checkpoint_config = CheckpointConfig()
 
-    distillation_config = DistillationConfig(strategy=strategy, rollout_n=-1, ppo_micro_batch_size_per_gpu=-1)
+    distillation_config = TeacherModelConfig(strategy=strategy, rollout_n=-1, ppo_micro_batch_size_per_gpu=-1)
 
     # build model engine
     engine: BaseEngine = EngineRegistry.new(

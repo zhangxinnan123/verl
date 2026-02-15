@@ -22,7 +22,7 @@ from verl.utils import tensordict_utils as tu
 from verl.utils.dataset.dataset_utils import DatasetPadMode
 from verl.utils.metric import AggregationType, Metric
 from verl.utils.torch_functional import masked_mean, masked_sum
-from verl.workers.config import ActorConfig, CriticConfig, DistillationConfig, DistillationLossConfig
+from verl.workers.config import ActorConfig, CriticConfig, TeacherModelConfig, DistillationLossConfig
 from verl.workers.utils.padding import no_padding_2_padding
 
 
@@ -57,7 +57,7 @@ def sft_loss(config: ActorConfig, model_output, data: TensorDict, dp_group=None)
 
 def ppo_loss(
     config: ActorConfig,
-    distillation_config: DistillationConfig,
+    distillation_config: TeacherModelConfig,
     model_output: dict[str, torch.Tensor],
     data: TensorDict,
     dp_group=None,

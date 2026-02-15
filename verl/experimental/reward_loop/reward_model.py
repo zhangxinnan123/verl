@@ -17,7 +17,7 @@ import logging
 import os
 
 from verl.single_controller.ray.base import RayResourcePool, split_resource_pool
-from verl.workers.config import HFModelConfig, RewardModelConfig
+from verl.workers.config import HFModelConfig, TeacherModelConfig
 from verl.workers.rollout.replica import get_rollout_replica_class
 
 logger = logging.getLogger(__file__)
@@ -29,7 +29,7 @@ class RewardModelManager:
 
     def __init__(
         self,
-        config: RewardModelConfig,
+        config: TeacherModelConfig,
         resource_pool: RayResourcePool = None,
     ):
         """

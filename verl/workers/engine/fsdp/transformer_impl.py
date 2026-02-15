@@ -70,7 +70,7 @@ from verl.utils.ulysses import (
     ulysses_pad,
     ulysses_pad_and_slice_inputs,
 )
-from verl.workers.config import DistillationConfig, FSDPEngineConfig, FSDPOptimizerConfig, HFModelConfig
+from verl.workers.config import TeacherModelConfig, FSDPEngineConfig, FSDPOptimizerConfig, HFModelConfig
 
 from ..base import BaseEngine, BaseEngineCtx, EngineRegistry
 from ..utils import enable_full_determinism, postprocess_batch_func, prepare_micro_batches
@@ -95,7 +95,7 @@ class FSDPEngine(BaseEngine):
         engine_config: FSDPEngineConfig,
         optimizer_config: FSDPOptimizerConfig,
         checkpoint_config: CheckpointConfig,
-        distillation_config: Optional[DistillationConfig],
+        distillation_config: Optional[TeacherModelConfig],
     ):
         """
         Initialize the FSDPEngine.

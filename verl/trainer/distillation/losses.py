@@ -22,13 +22,13 @@ from verl.base_config import BaseConfig
 from verl.trainer.distillation.types import DistillationLossInputs
 from verl.trainer.ppo.core_algos import agg_loss, kl_penalty
 from verl.utils.metric import AggregationType, Metric
-from verl.workers.config import DistillationConfig, DistillationLossConfig
+from verl.workers.config import TeacherModelConfig, DistillationLossConfig
 
 DistillationLossFn = Callable[
     [
         DistillationLossInputs,  # inputs
         torch.Tensor,  # response_mask
-        DistillationConfig,  # config
+        TeacherModelConfig,  # config
         str,  # loss_agg_mode
     ],
     tuple[torch.Tensor, dict[str, Any]],
@@ -115,7 +115,7 @@ def compute_distillation_loss_range(
 def compute_distillation_loss(
     inputs: DistillationLossInputs,
     response_mask: torch.Tensor,
-    config: DistillationConfig,
+    config: TeacherModelConfig,
     loss_agg_mode: str = "token-mean",
 ) -> tuple[torch.Tensor, dict[str, Any]]:
     """
@@ -163,7 +163,7 @@ def compute_distillation_loss(
 def compute_forward_kl_topk(
     inputs: DistillationLossInputs,
     response_mask: torch.Tensor,
-    config: DistillationConfig,
+    config: TeacherModelConfig,
     loss_agg_mode: str = "token-mean",
 ) -> tuple[torch.Tensor, dict[str, Any]]:
     """
@@ -231,7 +231,7 @@ def compute_forward_kl_topk(
 def compute_distillation_loss_reverse_kl_estimator(
     inputs: DistillationLossInputs,
     response_mask: torch.Tensor,
-    config: DistillationConfig,
+    config: TeacherModelConfig,
     loss_agg_mode: str = "token-mean",
 ) -> tuple[torch.Tensor, dict[str, Any]]:
     """

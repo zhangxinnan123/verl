@@ -45,7 +45,7 @@ from verl.utils.tensordict_utils import maybe_fix_3d_position_ids
 from verl.utils.torch_functional import allgather_dict_into_dict
 from verl.workers.config import (
     ActorConfig,
-    DistillationConfig,
+    TeacherModelConfig,
     DistillationLossConfig,
     HFModelConfig,
     RolloutConfig,
@@ -529,7 +529,7 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
             distillation_config = self.config.get("distillation")
             if is_distillation_enabled(distillation_config):
                 prepare_ref_config(distillation_config, actor_config)
-                distillation_config: DistillationConfig = omega_conf_to_dataclass(distillation_config)
+                distillation_config: TeacherModelConfig = omega_conf_to_dataclass(distillation_config)
                 loss_config: DistillationLossConfig = distillation_config.distillation_loss
                 distillation_config.distillation_loss.loss_settings = get_distillation_loss_settings(
                     loss_config.loss_mode
@@ -743,7 +743,7 @@ class TeacherWorker(Worker, DistProfilerExtension):
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
     def init_model(self):
         prepare_ref_config(self.config.distillation, self.config.actor)
-        distillation_config: DistillationConfig = omega_conf_to_dataclass(self.config.distillation)
+        distillation_config: TeacherModelConfig = omega_conf_to_dataclass(self.config.distillation)
         distillation_loss_config: DistillationLossConfig = distillation_config.distillation_loss
         distillation_config.distillation_loss.loss_settings = get_distillation_loss_settings(
             distillation_loss_config.loss_mode

@@ -39,7 +39,7 @@ from verl.utils.ulysses import (
     get_ulysses_sequence_parallel_group,
     set_ulysses_sequence_parallel_group,
 )
-from verl.workers.config import DistillationConfig, HFModelConfig, VeOmniEngineConfig, VeOmniOptimizerConfig
+from verl.workers.config import TeacherModelConfig, HFModelConfig, VeOmniEngineConfig, VeOmniOptimizerConfig
 
 from ..base import BaseEngineCtx, EngineRegistry
 from ..fsdp.transformer_impl import FSDPEngine, FSDPEngineWithLMHead
@@ -63,7 +63,7 @@ class VeOmniEngine(FSDPEngine):
         engine_config: VeOmniEngineConfig,
         optimizer_config: VeOmniOptimizerConfig,
         checkpoint_config: CheckpointConfig,
-        distillation_config: Optional[DistillationConfig],
+        distillation_config: Optional[TeacherModelConfig],
         **kwargs,
     ):
         """

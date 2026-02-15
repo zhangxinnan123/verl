@@ -22,7 +22,7 @@ except ImportError:
     repatch = None
 
 from verl.trainer.config import CheckpointConfig
-from verl.workers.config import DistillationConfig, HFModelConfig, McoreEngineConfig, McoreOptimizerConfig
+from verl.workers.config import TeacherModelConfig, HFModelConfig, McoreEngineConfig, McoreOptimizerConfig
 
 from ..base import EngineRegistry
 from ..megatron import MegatronEngineWithLMHead
@@ -39,7 +39,7 @@ class MindspeedEngineWithLMHead(MegatronEngineWithLMHead):
         engine_config: McoreEngineConfig,
         optimizer_config: McoreOptimizerConfig,
         checkpoint_config: CheckpointConfig,
-        distillation_config: Optional[DistillationConfig],
+        distillation_config: Optional[TeacherModelConfig],
     ):
         super().__init__(model_config, engine_config, optimizer_config, checkpoint_config, distillation_config)
 

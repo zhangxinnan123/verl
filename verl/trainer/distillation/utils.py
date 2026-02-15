@@ -24,7 +24,7 @@ from verl.trainer.distillation.fsdp import utils as fsdp_utils
 from verl.trainer.distillation.losses import DistillationLossSettings, get_distillation_loss_settings
 from verl.trainer.distillation.types import DistillationLossInputs
 from verl.utils.stages import Stage
-from verl.workers.config import DistillationConfig, DistillationLossConfig
+from verl.workers.config import TeacherModelConfig, DistillationLossConfig
 from verl.workers.utils.padding import no_padding_2_padding
 
 # Estimator distillation key
@@ -39,7 +39,7 @@ STUDENT_LOGITS_KEY = "student_logits"
 
 
 def compute_topk_distillation_inputs(
-    logits: torch.Tensor, batch: TensorDict, cu_seqlens: torch.Tensor, config: DistillationConfig
+    logits: torch.Tensor, batch: TensorDict, cu_seqlens: torch.Tensor, config: TeacherModelConfig
 ) -> dict[str, torch.Tensor]:
     """Compute distillation inputs using top-k log probabilities of teacher."""
     # Gather inputs for top-k distillation losses.
@@ -67,14 +67,14 @@ def compute_topk_distillation_inputs(
             raise ValueError(f"Unexpected stage: {stage}")
 
 
-def is_distillation_enabled(config: Optional[DistillationConfig]) -> bool:
+def is_distillation_enabled(config: Optional[TeacherModelConfig]) -> bool:
     """Check if distillation is enabled based on the provided configuration."""
     if config is None:
         return False
     return config.enabled
 
 
-def distillation_requires_logits(config: DistillationConfig) -> bool:
+def distillation_requires_logits(config: TeacherModelConfig) -> bool:
     """Check if distillation loss requires logits based on the provided configuration."""
     loss_config: DistillationLossConfig = config.distillation_loss
     distillation_settings: DistillationLossSettings = loss_config.loss_settings
@@ -82,7 +82,7 @@ def distillation_requires_logits(config: DistillationConfig) -> bool:
 
 
 def compute_distillation_inputs(
-    logits: torch.Tensor, batch: TensorDict, cu_seqlens: torch.Tensor, config: Optional[DistillationConfig]
+    logits: torch.Tensor, batch: TensorDict, cu_seqlens: torch.Tensor, config: Optional[TeacherModelConfig]
 ) -> dict[str, torch.Tensor]:
     """Compute the distillation inputs for a given stage of training."""
     if not is_distillation_enabled(config):
@@ -109,7 +109,7 @@ def compute_distillation_inputs(
 
 
 def extract_distillation_inputs(
-    stage: Stage, output: TensorDict, config: DistillationConfig
+    stage: Stage, output: TensorDict, config: TeacherModelConfig
 ) -> dict[str, torch.Tensor]:
     """Extract distillation loss inputs from model output for a given stage. Used in trainer."""
     loss_config: DistillationLossConfig = config.distillation_loss
@@ -135,7 +135,7 @@ def extract_distillation_inputs(
 
 
 def prepare_distillation_inputs(
-    log_prob: torch.Tensor, data: TensorDict, model_output: dict[str, torch.Tensor], config: DistillationConfig
+    log_prob: torch.Tensor, data: TensorDict, model_output: dict[str, torch.Tensor], config: TeacherModelConfig
 ) -> DistillationLossInputs:
     """Prepare distillation loss inputs for loss computation. Called in ppo_loss before computing distillation loss."""
     loss_config: DistillationLossConfig = config.distillation_loss

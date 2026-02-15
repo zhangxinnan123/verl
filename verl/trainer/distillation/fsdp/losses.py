@@ -16,7 +16,7 @@
 import torch
 import torch.nn.functional as F
 
-from verl.workers.config import DistillationConfig, DistillationLossConfig
+from verl.workers.config import TeacherModelConfig, DistillationLossConfig
 
 
 def kl_divergence(log_q: torch.Tensor, log_p: torch.Tensor) -> torch.Tensor:
@@ -92,7 +92,7 @@ def compute_forward_kl_topk(
     student_logits: torch.Tensor,
     teacher_topk_log_probs: torch.Tensor,
     teacher_topk_indices: torch.Tensor,
-    config: DistillationConfig,
+    config: TeacherModelConfig,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Compute forward KL distillation loss using top-k log probabilities."""
     student_log_probs = F.log_softmax(student_logits, dim=-1)
