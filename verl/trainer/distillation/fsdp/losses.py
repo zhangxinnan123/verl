@@ -16,7 +16,7 @@
 import torch
 import torch.nn.functional as F
 
-from verl.workers.config import DistillationConfig
+from verl.workers.config import TeacherModelConfig, DistillationLossConfig
 
 
 def kl_divergence(log_q: torch.Tensor, log_p: torch.Tensor) -> torch.Tensor:
@@ -92,16 +92,17 @@ def compute_forward_kl_topk(
     student_logits: torch.Tensor,
     teacher_topk_log_probs: torch.Tensor,
     teacher_topk_indices: torch.Tensor,
-    config: DistillationConfig,
+    config: TeacherModelConfig,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Compute forward KL distillation loss using top-k log probabilities."""
     student_log_probs = F.log_softmax(student_logits, dim=-1)
     student_topk_log_probs = torch.gather(student_log_probs, dim=-1, index=teacher_topk_indices)
     student_mass = student_topk_log_probs.exp().sum(dim=-1)
     teacher_mass = teacher_topk_log_probs.exp().sum(dim=-1)
-    if config.log_prob_min_clamp is not None:
-        student_topk_log_probs = student_topk_log_probs.clamp_min(config.log_prob_min_clamp)
-        teacher_topk_log_probs = teacher_topk_log_probs.clamp_min(config.log_prob_min_clamp)
+    loss_config: DistillationLossConfig = config.distillation_loss
+    if loss_config.log_prob_min_clamp is not None:
+        student_topk_log_probs = student_topk_log_probs.clamp_min(loss_config.log_prob_min_clamp)
+        teacher_topk_log_probs = teacher_topk_log_probs.clamp_min(loss_config.log_prob_min_clamp)
     distillation_losses = kullback_leibler_divergence(
         log_q=student_topk_log_probs, log_p=teacher_topk_log_probs, loss_mode="forward"
     )

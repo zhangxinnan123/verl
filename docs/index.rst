@@ -100,6 +100,7 @@ verl is fast with:
    perf/dpsk.md
    perf/best_practices
    perf/perf_tuning
+   perf/perf_tuning_on_ascend.rst
    README_vllm0.8.md
    perf/device_tuning
    perf/verl_profiler_system.md
@@ -154,6 +155,7 @@ verl is fast with:
    ascend_tutorial/examples/gspo_optimization_practice.md
    ascend_tutorial/examples/dapo_multi_model_optimization_practice.md
    ascend_tutorial/examples/ascend_sglang_best_practices.rst
+   ascend_tutorial/examples/ascend_retool_best_pratice.rst
 
 .. toctree::
    :maxdepth: 1

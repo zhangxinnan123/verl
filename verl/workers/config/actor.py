@@ -20,8 +20,9 @@ from omegaconf import MISSING
 from verl.base_config import BaseConfig
 from verl.trainer.config import CheckpointConfig
 from verl.utils.profiler.config import ProfilerConfig
+from verl.utils.qat import QATConfig
 
-from .engine import FSDPEngineConfig, McoreEngineConfig
+from .engine import FSDPEngineConfig, McoreEngineConfig, VeOmniEngineConfig
 from .model import HFModelConfig
 from .optimizer import OptimizerConfig
 
@@ -31,8 +32,13 @@ __all__ = [
     "ActorConfig",
     "FSDPActorConfig",
     "McoreActorConfig",
-    "DistillationConfig",
-    "FSDPDistillationConfig",
+    "VeOmniActorConfig",
+    "FSDPDistillationConfig", 
+    "DistillationConfig" 
+    "DistillationLossConfig",
+    "QATConfig",
+    "TeacherHFModelConfig",
+    "TeacherModelsConfig",
 ]
 
 
@@ -295,6 +301,7 @@ class FSDPActorConfig(ActorConfig):
     use_rollout_log_probs: bool = False
     calculate_sum_pi_squared: bool = False
     sum_pi_squared_checkpointing: bool = False
+    qat: QATConfig = field(default_factory=QATConfig)
 
     def __post_init__(self):
         """Validate FSDP actor configuration parameters."""
@@ -317,59 +324,24 @@ class FSDPActorConfig(ActorConfig):
 
 
 @dataclass
-class DistillationConfig(ActorConfig):
-    """Configuration for on-policy distillation training.
+class VeOmniActorConfig(ActorConfig):
+    """Configuration for VeOmni actor models.
 
-    Extends ActorConfig with settings for distilling knowledge from a teacher model
-    to a student model during reinforcement learning training.
+    The inheritance from BaseConfig provides omegaconf.DictConfig-like interface for a dataclass config.
 
     Args:
-        enabled (bool):
-            Whether distillation is enabled.
-        loss_mode (str):
-            Distillation loss function to use.
-        topk (int, optional):
-            Number of top tokens to consider for top-k distillation losses.
-        use_policy_loss (bool):
-            Whether to include policy gradient loss alongside distillation loss.
-        distillation_loss_coef (float):
-            Coefficient for distillation loss when combined with policy loss.
-        jsd_beta (float):
-            Interpolation weight for JSD loss. When beta=0, behaves like forward KL.
-            When beta=1, behaves like reverse KL.
-        teacher_model (HFModelConfig):
-            Configuration for the teacher model.
-        loss_max_clamp (float, optional):
-            Maximum value to clamp distillation loss. If None, no clamping is applied.
-        log_prob_min_clamp (float, optional):
-            Minimum value to clamp log probabilities for stability, e.g., log q - log p where p or q are
-            very close to zero. If None, no clamping is applied.
-        loss_settings (DistillationLossSettings, optional):
-            Runtime-populated settings based on loss_mode. Not set by user.
+        strategy (str): Training strategy set to 'veomni' for VeOmni parallelism.
+        veomni (dict[str, Any]): Configuration for VeOmni settings.
+        use_remove_padding (bool): Whether to remove padding tokens in inputs during training
     """
 
-    enabled: bool = False
-    loss_mode: str = "k3"
-    topk: Optional[int] = 128
-    use_policy_loss: bool = True
-    distillation_loss_coef: float = 1.0
-    jsd_beta: float = 0.5
-    teacher_model: HFModelConfig = field(default_factory=BaseConfig)
-    loss_max_clamp: Optional[float] = 10.0
-    log_prob_min_clamp: Optional[float] = -10.0
-
-    # Store distillation loss settings for computing the specified loss_mode
-    # Not set by user, populated at runtime
-    loss_settings: Optional[dict] = None
+    strategy: str = "veomni"
+    veomni: VeOmniEngineConfig = field(default_factory=VeOmniEngineConfig)
+    use_remove_padding: bool = False
+    use_rollout_log_probs: bool = False
 
     def __post_init__(self):
+        """Validate VeOmni actor configuration parameters."""
         super().__post_init__()
-        self._mutable_fields.add("loss_settings")
+        self.engine = self.veomni
 
-
-@dataclass
-class FSDPDistillationConfig(FSDPActorConfig, DistillationConfig):
-    """Configuration for on-policy distillation training with FSDP."""
-
-    def __post_init__(self):
-        super().__post_init__()

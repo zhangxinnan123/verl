@@ -23,7 +23,44 @@ from ...utils.profiler import ProfilerConfig
 from .model import HFModelConfig
 from .optimizer import OptimizerConfig
 
-__all__ = ["FSDPEngineConfig", "McoreEngineConfig", "TrainingWorkerConfig", "VeOmniEngineConfig", "EngineConfig"]
+__all__ = [
+    "FSDPEngineConfig",
+    "McoreEngineConfig",
+    "TrainingWorkerConfig",
+    "VeOmniEngineConfig",
+    "EngineConfig",
+    "EngineRouterReplayConfig",
+]
+
+
+# TODO: rename to RouterReplayConfig after removing the legacy implementation
+@dataclass
+class EngineRouterReplayConfig(BaseConfig):
+    """Configuration for router replay in MoE models.
+
+    This configuration controls the routing behavior for Mixture of Experts (MoE) models,
+    allowing for deterministic training through route recording and replay.
+
+    Args:
+        mode (str): Router replay mode. Options: 'disabled', 'R2', 'R3'.
+            - 'disabled': No router replay functionality
+            - 'R2': Use Router Replay routing strategy
+            - 'R3': Use Rollout Router Replay routing strategy
+        record_file (Optional[str]): File path to save recorded routing decisions.
+            Required when mode is 'record', 'R2', or 'R3'.
+        replay_file (Optional[str]): File path to load recorded routing decisions for replay.
+            Required when mode is 'replay'.
+    """
+
+    mode: str = "disabled"
+    record_file: Optional[str] = None
+    replay_file: Optional[str] = None
+
+    def __post_init__(self):
+        """Validate router replay configuration."""
+        valid_modes = ["disabled", "R2", "R3"]
+        if self.mode not in valid_modes:
+            raise ValueError(f"Invalid router_replay mode: {self.mode}. Must be one of {valid_modes}")
 
 
 @dataclass
@@ -37,7 +74,6 @@ class EngineConfig(BaseConfig):
         "use_fused_kernels",
         "use_remove_padding",
     }
-
     # whether to offload param
     param_offload: bool = False
     # whether to offload optimizer
@@ -66,6 +102,7 @@ class EngineConfig(BaseConfig):
     seed: int = 42
 
     full_determinism: bool = False
+    router_replay: EngineRouterReplayConfig = field(default_factory=EngineRouterReplayConfig)
 
     def __post_init__(self):
         pass
@@ -198,15 +235,9 @@ class VeOmniEngineConfig(EngineConfig):
         optimizer_offload (bool): Whether to offload optimizer states to CPU, default False
         offload_policy (bool): Whether to offload policy model parameters, default False
         reshard_after_forward (bool): Whether to reshard parameters after forward pass, default True
-        data_parallel_size (int): FSDP group size, default 1
-        data_parallel_replicate_size (int): Data parallel replicate size, default 1
-        data_parallel_shard_size (int): Data parallel shard degree, default 1
-        tensor_parallel_size (int): Tensor parallel size, default 1
-        expert_parallel_size (int): Expert parallel size, default 1
-        pipeline_parallel_size (int): Pipeline parallel size, default 1
-        context_parallel_size (int): Ring-attn context parallel size, default 1
+        fsdp_size (int): FSDP group size. -1 means use all available GPUs, default -1
         ulysses_parallel_size (int): Ulysses sequence parallel size, default 1
-        data_parallel_mode (str): Data parallel mode, default "fsdp"
+        expert_parallel_size (int): Expert parallel size, default 1
         init_device (str): Device to initialize model weights.
             1. `cpu`: Init parameters on CPU in rank0 only.
             2. `cuda`: Init parameters on GPU.
@@ -255,15 +286,9 @@ class VeOmniEngineConfig(EngineConfig):
     use_torch_compile: bool = True
     entropy_checkpointing: bool = False
     strategy: str = "veomni"
-    data_parallel_size: int = 1
-    data_parallel_replicate_size: int = 1
-    data_parallel_shard_size: int = 1
-    tensor_parallel_size: int = 1
-    expert_parallel_size: int = 1
-    pipeline_parallel_size: int = 1
-    context_parallel_size: int = 1
+    fsdp_size: int = -1
     ulysses_parallel_size: int = 1
-    data_parallel_mode: Literal["ddp", "fsdp1", "fsdp2"] = "fsdp"
+    expert_parallel_size: int = 1
     seed: int = 42
     full_determinism: bool = False
     mixed_precision: bool = False
