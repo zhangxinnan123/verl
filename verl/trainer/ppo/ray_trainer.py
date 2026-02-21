@@ -50,11 +50,7 @@ from verl.trainer.ppo.metric_utils import (
     compute_variance_proxy_metrics,
     process_validation_metrics,
 )
-<<<<<<< HEAD
-from verl.trainer.ppo.reward import compute_reward, compute_reward_async
-=======
-from verl.trainer.ppo.reward import extract_reward
->>>>>>> origin/jhelwig/onPolicyDistillation
+from verl.trainer.ppo.reward import compute_reward, compute_reward_async, extract_reward
 from verl.trainer.ppo.utils import (
     Role,
     WorkerType,
@@ -288,17 +284,14 @@ class RayPPOTrainer:
 
         self.role_worker_mapping = role_worker_mapping
         self.resource_pool_manager = resource_pool_manager
-<<<<<<< HEAD
         self.use_reference_policy = need_reference_policy(self.config) or need_distillation_policy(self.config)
-        # legacy reward model implementation
-        self.use_rm = need_reward_model(self.role_worker_mapping)
-        self.use_reward_loop = self.config.reward_model.use_reward_loop
-=======
-        self.use_reference_policy = need_reference_policy(self.config)
         self.use_distillation_policy = need_distillation_policy(self.config)
-
+        
+        # support both legacy and new reward model implementation
         self.use_rm = need_reward_model(self.config)
->>>>>>> origin/jhelwig/onPolicyDistillation
+        # legacy reward model implementation
+        if hasattr(self.config, 'reward_model') and hasattr(self.config.reward_model, 'use_reward_loop'):
+            self.use_reward_loop = self.config.reward_model.use_reward_loop
 
         self.use_critic = need_critic(self.config)
         self.ray_worker_group_cls = ray_worker_group_cls
@@ -491,11 +484,8 @@ class RayPPOTrainer:
         self.validation_generations_logger.log(self.config.trainer.logger, samples, self.global_steps)
 
     def _get_gen_batch(self, batch: DataProto) -> DataProto:
-<<<<<<< HEAD
-        reward_model_keys = set({"data_source", "reward_model", "extra_info", "uid", "modified_prompt_texts"}) & batch.non_tensor_batch.keys()
-=======
-        reward_keys = set({"data_source", "reward_model", "extra_info", "uid"}) & batch.non_tensor_batch.keys()
->>>>>>> origin/jhelwig/onPolicyDistillation
+        # support both legacy and new reward key formats
+        reward_keys = set({"data_source", "reward_model", "extra_info", "uid", "modified_prompt_texts"}) & batch.non_tensor_batch.keys()
 
         # pop those keys for generation
         batch_keys_to_pop = []
