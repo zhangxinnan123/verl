@@ -163,7 +163,7 @@ def normalize_final_answer(final_answer: str) -> str:
 
 
 def is_correct_minerva(
-    solution_str: str, gt: str, gt_need_extract: bool = False, answer_pattern: str = r"(?i)Answer\s*:\s*([^\n]+)"
+    solution_str: str, gt: str, gt_need_extract: bool = False, answer_pattern: str = r"(?i)Answer\s*:\s*([^\n<]+)"
 ) -> tuple[bool, str]:
     """Check if the solution is correct according to Minerva criteria.
 

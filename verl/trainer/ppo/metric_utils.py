@@ -207,6 +207,8 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "prompt_length/max": torch.max(prompt_length).detach().item(),
         "prompt_length/min": torch.min(prompt_length).detach().item(),
         "prompt_length/clip_ratio": torch.mean(torch.eq(prompt_length, max_prompt_length).float()).detach().item(),
+        # pass@k metrics
+        "critic/pass_at_n": compute_pass_at_n(sequence_reward, batch),
     }
 
     # multi-turn conversation
@@ -223,6 +225,61 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         metrics["tool_call_counts/mean"] = tool_call_counts.mean()
 
     return metrics
+
+
+def compute_pass_at_n(sequence_reward: torch.Tensor, batch: DataProto) -> float:
+    """
+    Compute pass@n metric following SkyRL's exact implementation.
+    
+    From SkyRL: "For each trajectory, if the reward is positive, then it's a 'pass'. 
+    So for a single example, if any of its trajectories' reward is positive, pass@n for that uid is 1."
+    
+    Args:
+        sequence_reward: Tensor of sequence-level rewards, shape (batch_size,)
+        batch: DataProto object containing grouping information
+    
+    Returns:
+        Pass@n rate as a float
+    """
+    from collections import defaultdict
+    
+    # Map from the example's uid to each trajectory's reward on that same example
+    # Following SkyRL's uid_to_trajectory_rewards logic
+    uid_to_trajectory_rewards = defaultdict(list)
+    
+    # Check different possible ways to get grouping information
+    if "__prompt_groups__" in batch.non_tensor_batch:
+        # Direct prompt groups (if stored)
+        prompt_groups = batch.non_tensor_batch["__prompt_groups__"]
+        for i, uid in enumerate(prompt_groups):
+            uid_to_trajectory_rewards[uid].append(sequence_reward[i].item())
+    elif "index" in batch.non_tensor_batch:
+        # GRPO-style index array (used in advantage estimation)
+        index = batch.non_tensor_batch["index"]
+        for i, uid in enumerate(index):
+            uid_to_trajectory_rewards[uid].append(sequence_reward[i].item())
+    elif "uid" in batch.non_tensor_batch:
+        # Direct uid information (if available)
+        uids = batch.non_tensor_batch["uid"] 
+        for i, uid in enumerate(uids):
+            uid_to_trajectory_rewards[uid].append(sequence_reward[i].item())
+    else:
+        # Fallback: treat each response as from a different prompt (pass@1)
+        # This happens when rollout.n=1 (no grouping needed)
+        for i in range(len(sequence_reward)):
+            uid_to_trajectory_rewards[i].append(sequence_reward[i].item())
+    
+    # SkyRL's exact pass@n calculation:
+    # "For each trajectory, if the reward is positive, then it's a 'pass'. So for a single example, if
+    # any of its trajectories' reward is positive, pass@n for that uid is 1."
+    if len(uid_to_trajectory_rewards) == 0:
+        return 0.0
+        
+    pass_at_n = sum(1 for v in uid_to_trajectory_rewards.values() if any(r > 0 for r in v)) / len(
+        uid_to_trajectory_rewards
+    )
+    
+    return pass_at_n
 
 
 def compute_timing_metrics(batch: DataProto, timing_raw: dict[str, float]) -> dict[str, Any]:
@@ -656,4 +713,42 @@ def process_validation_metrics(
         for var_name, metric2uid_vals in var2metric2uid_vals.items():
             for metric_name, uid_vals in metric2uid_vals.items():
                 data_src2var2metric2val[data_source][var_name][metric_name] = np.mean(uid_vals)
+                
+    # Compute derived classification metrics from aggregated TP, TN, FP, FN (only for mean@1)
+    for data_source in list(data_src2var2metric2val.keys()):
+        var2metric2val = data_src2var2metric2val[data_source]
+
+        # Check if we have all confusion matrix components with mean@1
+        if all(key in var2metric2val and "mean@1" in var2metric2val[key] for key in ["TP", "TN", "FP", "FN"]):
+            tp = var2metric2val["TP"]["mean@1"]
+            tn = var2metric2val["TN"]["mean@1"]
+            fp = var2metric2val["FP"]["mean@1"]
+            fn = var2metric2val["FN"]["mean@1"]
+
+            # Precision = TP / (TP + FP)
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+
+            # Recall (TPR) = TP / (TP + FN)
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+
+            # F1 Score = 2 * (Precision * Recall) / (Precision + Recall)
+            f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+
+            # Accuracy = (TP + TN) / (TP + TN + FP + FN)
+            total = tp + tn + fp + fn
+            accuracy = (tp + tn) / total if total > 0 else 0.0
+
+            # Specificity (TNR) = TN / (TN + FP)
+            specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+
+            # Balanced Accuracy = (TPR + TNR) / 2
+            balanced_accuracy = (recall + specificity) / 2
+
+            # Store the derived metrics with mean@1 key
+            var2metric2val["precision"] = defaultdict(float, {"mean@1": precision})
+            var2metric2val["recall"] = defaultdict(float, {"mean@1": recall})
+            var2metric2val["f1_score"] = defaultdict(float, {"mean@1": f1})
+            var2metric2val["accuracy"] = defaultdict(float, {"mean@1": accuracy})
+            var2metric2val["specificity"] = defaultdict(float, {"mean@1": specificity})
+            var2metric2val["balanced_accuracy"] = defaultdict(float, {"mean@1": balanced_accuracy})
     return data_src2var2metric2val
